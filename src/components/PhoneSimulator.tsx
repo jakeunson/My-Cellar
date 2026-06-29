@@ -152,8 +152,32 @@ export default function PhoneSimulator({
   const [showExitModal, setShowExitModal] = useState<boolean>(false);
   const [isAppClosed, setIsAppClosed] = useState<boolean>(false);
 
-  // 안드로이드 물리 뒤로가기 버튼 / ESC 키 입력 감지 핸들러
+  // 안드로이드 제스쳐 및 물리 뒤로가기 버튼(popstate) / ESC 키 입력 감지 핸들러
   useEffect(() => {
+    // 뒤로가기 제스쳐 감지를 위해 history에 현재 상태 push
+    window.history.pushState(null, '', window.location.href);
+
+    const handlePopState = () => {
+      // 제스쳐 발생 시 페이지 탈출을 방지하기 위해 state를 다시 덮어씀
+      window.history.pushState(null, '', window.location.href);
+
+      if (showExitModal) {
+        setShowExitModal(false);
+        return;
+      }
+      if (currentScreen === 'home') {
+        setShowExitModal(true);
+      } else if (currentScreen === 'add' || currentScreen === 'detail' || currentScreen === 'add_review' || currentScreen === 'edit_liquor') {
+        onScreenChange('home');
+      } else if (currentScreen === 'add_ranking') {
+        onScreenChange('ranking');
+      } else if (currentScreen === 'add_party') {
+        onScreenChange('parties');
+      } else {
+        onScreenChange('home');
+      }
+    };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (showExitModal) {
@@ -173,8 +197,13 @@ export default function PhoneSimulator({
         }
       }
     };
+
+    window.addEventListener('popstate', handlePopState);
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [currentScreen, onScreenChange, showExitModal]);
 
   const selectedEntry = entries.find(e => e.id === selectedEntryId);
@@ -1653,40 +1682,9 @@ export default function PhoneSimulator({
           </button>
         </div>
 
-        {/* Android 3-Button System Navigation Bar */}
-        <div className="h-8 w-full bg-slate-900 text-slate-400 flex items-center justify-around shrink-0 px-8 select-none z-30">
-          <button
-            onClick={() => {
-              if (currentScreen === 'home') {
-                setShowExitModal(true);
-              } else if (currentScreen === 'add' || currentScreen === 'detail' || currentScreen === 'add_review' || currentScreen === 'edit_liquor') {
-                onScreenChange('home');
-              } else if (currentScreen === 'add_ranking') {
-                onScreenChange('ranking');
-              } else if (currentScreen === 'add_party') {
-                onScreenChange('parties');
-              } else {
-                onScreenChange('home');
-              }
-            }}
-            className="p-1 hover:text-white transition-colors active:scale-90 cursor-pointer"
-            title="안드로이드 뒤로가기"
-          >
-            <span className="text-base font-bold">◁</span>
-          </button>
-          <button
-            onClick={() => onScreenChange('home')}
-            className="p-1 hover:text-white transition-colors active:scale-90 cursor-pointer"
-            title="안드로이드 홈"
-          >
-            <span className="text-base font-bold">○</span>
-          </button>
-          <button
-            className="p-1 hover:text-white transition-colors active:scale-90 opacity-60 cursor-pointer"
-            title="최근 실행 앱"
-          >
-            <span className="text-base font-bold">□</span>
-          </button>
+        {/* Full-screen Gesture Navigation Bar (최소화된 제스쳐 홈 바) */}
+        <div className="h-4 w-full bg-white flex items-center justify-center shrink-0">
+          <div className="w-28 h-1 bg-slate-300 rounded-full"></div>
         </div>
 
         {/* 앱 종료 확인 모달 (Android Back on Home) */}
