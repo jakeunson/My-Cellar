@@ -147,6 +147,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.unit.sp
 import com.example.tastingjournal.data.TastingEntry
 
@@ -155,8 +156,32 @@ import com.example.tastingjournal.data.TastingEntry
 fun TastingListScreen(
     entries: List<TastingEntry>,
     onLiquorClick: (String) -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onExitApp: () -> Unit = {}
 ) {
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    BackHandler {
+        showExitDialog = true
+    }
+
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text("앱 종료 확인", fontWeight = FontWeight.Bold) },
+            text = { Text("My Cellar 테이스팅 저널을 종료하시겠습니까?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showExitDialog = false
+                    onExitApp()
+                }) { Text("종료", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) { Text("취소") }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

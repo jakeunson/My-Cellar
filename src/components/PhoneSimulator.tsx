@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Search, Star, Trash2, ArrowLeft, Check, 
@@ -148,6 +148,35 @@ export default function PhoneSimulator({
   const [partyExternalLiquors, setPartyExternalLiquors] = useState<string[]>([]);
   const [partyError, setPartyError] = useState<string>('');
 
+  // 안드로이드 앱 종료 모달 및 종료 시뮬레이션 상태
+  const [showExitModal, setShowExitModal] = useState<boolean>(false);
+  const [isAppClosed, setIsAppClosed] = useState<boolean>(false);
+
+  // 안드로이드 물리 뒤로가기 버튼 / ESC 키 입력 감지 핸들러
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showExitModal) {
+          setShowExitModal(false);
+          return;
+        }
+        if (currentScreen === 'home') {
+          setShowExitModal(true);
+        } else if (currentScreen === 'add' || currentScreen === 'detail' || currentScreen === 'add_review' || currentScreen === 'edit_liquor') {
+          onScreenChange('home');
+        } else if (currentScreen === 'add_ranking') {
+          onScreenChange('ranking');
+        } else if (currentScreen === 'add_party') {
+          onScreenChange('parties');
+        } else {
+          onScreenChange('home');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentScreen, onScreenChange, showExitModal]);
+
   const selectedEntry = entries.find(e => e.id === selectedEntryId);
 
   // 가장 최근 날짜의 랭킹 스냅샷 가져오기
@@ -161,18 +190,40 @@ export default function PhoneSimulator({
     return found ? found.rank : null;
   };
 
-  // 이미지 업로드 변환 핸들러 (FileReader -> Base64)
+  // 이미지 업로드 변환 핸들러 (FileReader -> Base64 + Canvas 리사이징/압축으로 폰 카메라 고용량 이미지 완벽 대응)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, setUrl: (url: string) => void) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          setUrl(reader.result as string);
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDim = 800; // 최대 해상도 800px 제한 (localStorage 용량 보호)
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
         }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        // JPEG 0.7 압축으로 용량 최적화 (약 50KB 수준)
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setUrl(compressedDataUrl);
       };
-      reader.readAsDataURL(file);
-    }
+      if (event.target?.result) {
+        img.src = event.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // 검색, 카테고리, 랭킹 정렬 필터링
@@ -1602,10 +1653,92 @@ export default function PhoneSimulator({
           </button>
         </div>
 
-        {/* Home Indicator Bar */}
-        <div className="h-3 w-full bg-white flex items-center justify-center shrink-0">
-          <div className="w-24 h-1 bg-slate-300 rounded-full"></div>
+        {/* Android 3-Button System Navigation Bar */}
+        <div className="h-8 w-full bg-slate-900 text-slate-400 flex items-center justify-around shrink-0 px-8 select-none z-30">
+          <button
+            onClick={() => {
+              if (currentScreen === 'home') {
+                setShowExitModal(true);
+              } else if (currentScreen === 'add' || currentScreen === 'detail' || currentScreen === 'add_review' || currentScreen === 'edit_liquor') {
+                onScreenChange('home');
+              } else if (currentScreen === 'add_ranking') {
+                onScreenChange('ranking');
+              } else if (currentScreen === 'add_party') {
+                onScreenChange('parties');
+              } else {
+                onScreenChange('home');
+              }
+            }}
+            className="p-1 hover:text-white transition-colors active:scale-90 cursor-pointer"
+            title="안드로이드 뒤로가기"
+          >
+            <span className="text-base font-bold">◁</span>
+          </button>
+          <button
+            onClick={() => onScreenChange('home')}
+            className="p-1 hover:text-white transition-colors active:scale-90 cursor-pointer"
+            title="안드로이드 홈"
+          >
+            <span className="text-base font-bold">○</span>
+          </button>
+          <button
+            className="p-1 hover:text-white transition-colors active:scale-90 opacity-60 cursor-pointer"
+            title="최근 실행 앱"
+          >
+            <span className="text-base font-bold">□</span>
+          </button>
         </div>
+
+        {/* 앱 종료 확인 모달 (Android Back on Home) */}
+        {showExitModal && (
+          <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-6 animate-fade-in backdrop-blur-2xs">
+            <div className="bg-white rounded-3xl p-5 w-full max-w-[260px] shadow-2xl text-center space-y-4 border border-slate-100">
+              <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-inner">
+                👋
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-extrabold text-slate-900 text-sm">앱 종료 확인</h3>
+                <p className="text-xs text-slate-500 leading-relaxed font-medium">
+                  My Cellar 테이스팅 저널을<br />종료하시겠습니까?
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <button
+                  onClick={() => setShowExitModal(false)}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => {
+                    setShowExitModal(false);
+                    setIsAppClosed(true);
+                  }}
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold py-2.5 rounded-xl text-xs shadow-md transition-colors cursor-pointer"
+                >
+                  종료
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 앱 종료 시뮬레이션 화면 */}
+        {isAppClosed && (
+          <div className="absolute inset-0 bg-slate-950 z-50 flex flex-col items-center justify-center p-6 text-center space-y-4 text-white">
+            <span className="text-4xl animate-bounce">🍷</span>
+            <div className="space-y-1">
+              <h2 className="text-base font-black tracking-tight">My Cellar 종료됨</h2>
+              <p className="text-xs text-slate-400">안전하게 데이터가 백업 및 저장되었습니다.</p>
+            </div>
+            <button
+              onClick={() => setIsAppClosed(false)}
+              className="mt-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold px-5 py-2.5 rounded-2xl text-xs shadow-lg transition-transform active:scale-95 cursor-pointer"
+            >
+              📱 앱 다시 실행하기
+            </button>
+          </div>
+        )}
 
       </div>
     </div>
