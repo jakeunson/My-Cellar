@@ -23,60 +23,96 @@ interface PhoneSimulatorProps {
   onDeleteParty?: (partyId: string) => void;
   currentScreen: string;
   onScreenChange: (screen: string) => void;
+  isStandalone?: boolean;
 }
 
 // 오각 레이더 차트 컴포넌트 (타이틀 제거됨)
 function RadarChart({ flavors }: { flavors: FlavorProfile }) {
-  const values = [flavors.sweet, flavors.bitter, flavors.sour, flavors.body, flavors.smoky];
-  const labels = ['단맛', '쓴맛', '신맛', '바디감', '스모키'];
-  const center = 100;
-  const maxRadius = 58;
+  const categories = [
+    { key: 'sweet', label: '단맛', value: flavors.sweet },
+    { key: 'bitter', label: '쓴맛', value: flavors.bitter },
+    { key: 'sour', label: '신맛', value: flavors.sour },
+    { key: 'body', label: '바디감', value: flavors.body },
+    { key: 'smoky', label: '스모키', value: flavors.smoky },
+  ];
 
-  const getPoint = (index: number, val: number) => {
+  const size = 180;
+  const center = size / 2;
+  const radius = (size / 2) - 25;
+  const maxVal = 5;
+
+  const getCoordinates = (index: number, value: number) => {
     const angle = (Math.PI * 2 * index) / 5 - Math.PI / 2;
-    const r = (val / 5) * maxRadius;
-    const x = center + r * Math.cos(angle);
-    const y = center + r * Math.sin(angle);
-    return `${x},${y}`;
+    const distance = (radius * value) / maxVal;
+    return [
+      center + distance * Math.cos(angle),
+      center + distance * Math.sin(angle)
+    ];
   };
 
-  const getLabelPoint = (index: number) => {
-    const angle = (Math.PI * 2 * index) / 5 - Math.PI / 2;
-    const r = maxRadius + 22;
-    const x = center + r * Math.cos(angle);
-    const y = center + r * Math.sin(angle);
-    return { x, y };
-  };
-
-  const polygonPoints = values.map((v, i) => getPoint(i, v)).join(' ');
-  const bgGrid = [5, 4, 3, 2, 1].map(level => 
-    [0, 1, 2, 3, 4].map(i => getPoint(i, level)).join(' ')
-  );
+  const points = categories
+    .map((cat, i) => getCoordinates(i, cat.value).join(','))
+    .join(' ');
 
   return (
-    <div className="w-full flex flex-col items-center py-2 bg-slate-50/80 rounded-2xl border border-slate-200/80 my-2 shadow-inner">
-      <svg viewBox="0 0 200 200" className="w-44 h-44 overflow-visible">
-        {bgGrid.map((pts, idx) => (
-          <polygon key={idx} points={pts} fill="none" stroke="#cbd5e1" strokeWidth={idx === 0 ? "1.5" : "0.5"} strokeDasharray={idx > 0 ? "2,2" : undefined} />
-        ))}
-        {[0, 1, 2, 3, 4].map(i => {
-          const pt = getPoint(i, 5).split(',');
-          return <line key={i} x1={center} y1={center} x2={pt[0]} y2={pt[1]} stroke="#cbd5e1" strokeWidth="0.5" />;
-        })}
-        <polygon points={polygonPoints} fill="rgba(245, 158, 11, 0.35)" stroke="#f59e0b" strokeWidth="2.5" />
-        {[0, 1, 2, 3, 4].map(i => {
-          const pt = getPoint(i, values[i]).split(',');
-          const lpt = getLabelPoint(i);
-          return (
-            <g key={i}>
-              <circle cx={pt[0]} cy={pt[1]} r="3" fill="#d97706" />
-              <text x={lpt.x} y={lpt.y} textAnchor="middle" dominantBaseline="middle" className="text-[9.5px] font-bold fill-slate-800">
-                {labels[i]} ({values[i]})
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+    <div className="flex flex-col items-center">
+      <div className="relative w-[180px] h-[180px] flex items-center justify-center">
+        <svg width={size} height={size} className="overflow-visible">
+          {[1, 2, 3, 4, 5].map((level) => {
+            const levelPoints = categories
+              .map((_, i) => getCoordinates(i, level).join(','))
+              .join(' ');
+            return (
+              <polygon
+                key={level}
+                points={levelPoints}
+                fill="none"
+                stroke={level === 5 ? '#cbd5e1' : '#f1f5f9'}
+                strokeWidth={level === 5 ? '1.5' : '1'}
+                strokeDasharray={level === 3 ? '2 2' : 'none'}
+              />
+            );
+          })}
+          {categories.map((_, i) => {
+            const [x, y] = getCoordinates(i, maxVal);
+            return (
+              <line
+                key={i}
+                x1={center}
+                y1={center}
+                x2={x}
+                y2={y}
+                stroke="#e2e8f0"
+                strokeWidth="1"
+              />
+            );
+          })}
+          <polygon
+            points={points}
+            fill="rgba(245, 158, 11, 0.25)"
+            stroke="#f59e0b"
+            strokeWidth="2.5"
+          />
+          {categories.map((cat, i) => {
+            const [x, y] = getCoordinates(i, cat.value);
+            const [labelX, labelY] = getCoordinates(i, maxVal + 1.2);
+            return (
+              <g key={cat.key}>
+                <circle cx={x} cy={y} r="3.5" fill="#f59e0b" className="drop-shadow-sm" />
+                <text
+                  x={labelX}
+                  y={labelY}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  className="text-[10px] font-extrabold fill-slate-700 select-none"
+                >
+                  {cat.label}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 }
@@ -95,7 +131,8 @@ export default function PhoneSimulator({
   onAddParty,
   onDeleteParty,
   currentScreen,
-  onScreenChange
+  onScreenChange,
+  isStandalone = false
 }: PhoneSimulatorProps) {
   const [activeTab, setActiveTab] = useState<LiquorCategory | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -523,24 +560,28 @@ export default function PhoneSimulator({
   ];
 
   return (
-    <div className="relative w-[320px] h-[640px] bg-slate-950 rounded-[3rem] p-3 shadow-2xl border-4 border-slate-800 ring-1 ring-slate-900/5 select-none flex flex-col justify-between">
+    <div className={isStandalone ? "relative w-full h-screen bg-white select-none flex flex-col justify-between overflow-hidden" : "relative w-[320px] h-[640px] bg-slate-950 rounded-[3rem] p-3 shadow-2xl border-4 border-slate-800 ring-1 ring-slate-900/5 select-none flex flex-col justify-between"}>
       
-      {/* Speaker / Sensor Notch */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-slate-950 rounded-b-xl z-30 flex items-center justify-center">
-        <div className="w-10 h-1 bg-slate-800 rounded-full"></div>
-      </div>
+      {/* Speaker / Sensor Notch (시뮬레이터 모드에서만 표시) */}
+      {!isStandalone && (
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-slate-950 rounded-b-xl z-30 flex items-center justify-center">
+          <div className="w-10 h-1 bg-slate-800 rounded-full"></div>
+        </div>
+      )}
 
       {/* Screen Container */}
-      <div className="relative w-full h-full bg-slate-50 rounded-[2.2rem] overflow-hidden flex flex-col pt-6 border border-slate-200/60 shadow-inner">
+      <div className={isStandalone ? "w-full h-full bg-slate-50 overflow-hidden flex flex-col" : "relative w-full h-full bg-slate-50 rounded-[2.2rem] overflow-hidden flex flex-col pt-6 border border-slate-200/60 shadow-inner"}>
         
-        {/* Status Bar */}
-        <div className="px-6 py-1 flex justify-between items-center text-[10px] font-bold text-slate-800 bg-white/80 backdrop-blur-md z-20 border-b border-slate-100 shrink-0">
-          <span>9:41</span>
-          <div className="flex items-center space-x-1.5">
-            <Wifi className="w-3 h-3 text-slate-800" />
-            <Battery className="w-3 h-3 text-slate-800 fill-slate-800" />
+        {/* Status Bar (시뮬레이터 모드에서만 표시) */}
+        {!isStandalone && (
+          <div className="px-6 py-1 flex justify-between items-center text-[10px] font-bold text-slate-800 bg-white/80 backdrop-blur-md z-20 border-b border-slate-100 shrink-0">
+            <span>9:41</span>
+            <div className="flex items-center space-x-1.5">
+              <Wifi className="w-3 h-3 text-slate-800" />
+              <Battery className="w-3 h-3 text-slate-800 fill-slate-800" />
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Dynamic Screen Content */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -1682,10 +1723,12 @@ export default function PhoneSimulator({
           </button>
         </div>
 
-        {/* Full-screen Gesture Navigation Bar (최소화된 제스쳐 홈 바) */}
-        <div className="h-4 w-full bg-white flex items-center justify-center shrink-0">
-          <div className="w-28 h-1 bg-slate-300 rounded-full"></div>
-        </div>
+        {/* Full-screen Gesture Navigation Bar (최소화된 제스쳐 홈 바 - 시뮬레이터 모드 전용) */}
+        {!isStandalone && (
+          <div className="h-4 w-full bg-white flex items-center justify-center shrink-0">
+            <div className="w-28 h-1 bg-slate-300 rounded-full"></div>
+          </div>
+        )}
 
         {/* 앱 종료 확인 모달 (Android Back on Home) */}
         {showExitModal && (

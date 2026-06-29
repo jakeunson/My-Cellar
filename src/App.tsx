@@ -147,6 +147,11 @@ export default function App() {
     return DEFAULT_PARTIES;
   });
 
+  // 스마트폰 화면이거나 PWA 설치 모드, URL 파라미터(?mode=app) 진입 시 서비스 화면 전용 풀스크린 모드 자동 활성화
+  const [isStandaloneMode, setIsStandaloneMode] = useState<boolean>(() => {
+    return window.innerWidth < 768 || window.location.search.includes('mode=app') || window.matchMedia('(display-mode: standalone)').matches;
+  });
+
   useEffect(() => {
     localStorage.setItem('tasting_entries_1n', JSON.stringify(entries));
   }, [entries]);
@@ -276,6 +281,38 @@ dependencies {
     setTimeout(() => setGradleCopied(false), 2000);
   };
 
+  if (isStandaloneMode) {
+    return (
+      <div className="w-full h-screen bg-white overflow-hidden relative font-sans">
+        {/* 모바일 실사용 모드 닫기 플로팅 버튼 (PC 화면에서 복귀용, 실제 모바일 너비에선 숨김) */}
+        <button
+          onClick={() => setIsStandaloneMode(false)}
+          className="hidden md:flex absolute top-4 right-4 bg-slate-900/80 hover:bg-slate-900 text-white px-3.5 py-2 rounded-full text-xs font-bold items-center space-x-1.5 shadow-xl z-50 backdrop-blur-md cursor-pointer transition-transform active:scale-95"
+          title="PC 시뮬레이터 개발 모드로 복귀"
+        >
+          <span>🖥️ PC 시뮬레이터 듀얼뷰로 돌아가기</span>
+        </button>
+        <PhoneSimulator 
+          entries={entries}
+          rankingRecords={rankingRecords}
+          parties={parties}
+          onAddLiquor={handleAddLiquor}
+          onUpdateLiquor={handleUpdateLiquor}
+          onAddReview={handleAddReview}
+          onDeleteLiquor={handleDeleteLiquor}
+          onDeleteReview={handleDeleteReview}
+          onAddRankingRecord={handleAddRankingRecord}
+          onDeleteRankingRecord={handleDeleteRankingRecord}
+          onAddParty={handleAddParty}
+          onDeleteParty={handleDeleteParty}
+          currentScreen={currentScreen}
+          onScreenChange={setCurrentScreen}
+          isStandalone={true}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-amber-500/20 selection:text-slate-950">
       
@@ -296,6 +333,15 @@ dependencies {
           </div>
 
           <div className="flex items-center space-x-2.5">
+            <button 
+              onClick={() => setIsStandaloneMode(true)}
+              className="flex items-center space-x-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-extrabold transition-all shadow-md cursor-pointer"
+              title="실제 폰 서비스 화면만 전체화면으로 보기"
+            >
+              <Smartphone className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>📱 실사용 풀스크린 모드</span>
+            </button>
+
             <button 
               onClick={handleResetData}
               className="flex items-center space-x-1.5 px-3 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-semibold transition-all border-2 border-slate-200"
