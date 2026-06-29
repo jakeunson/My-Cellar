@@ -9,14 +9,9 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=192&auto=format&fit=crop&q=80",
-      "sizes": "192x192",
-      "type": "image/jpeg"
-    },
-    {
-      "src": "https://images.unsplash.com/photo-1527281400683-1aae777175f8?w=512&auto=format&fit=crop&q=80",
-      "sizes": "512x512",
-      "type": "image/jpeg"
+      "src": "/icon.png",
+      "sizes": "192x192 512x512 1024x1024",
+      "type": "image/png"
     }
   ]
 }
