@@ -13,9 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.mycellar.app.data.TastingEntry
 import com.mycellar.app.data.TastingParty
 import com.mycellar.app.ui.theme.*
@@ -102,8 +104,28 @@ fun PartyCard(party: TastingParty, entries: List<TastingEntry>, onDelete: () -> 
             Spacer(modifier = Modifier.height(12.dp))
             Text(party.notes, fontSize = 14.sp, color = Slate800, lineHeight = 20.sp)
 
+            if (!party.imageUrl.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                ) {
+                    AsyncImage(
+                        model = party.imageUrl,
+                        contentDescription = "파티 현장 사진",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+
+            val validTagged = party.taggedLiquorIds.mapNotNull { lid -> entries.find { it.id == lid } }
+            val validExternal = party.externalLiquors ?: emptyList()
+
             // Tagged Liquors
-            if (party.taggedLiquorIds.isNotEmpty() || !party.externalLiquors.isNullOrEmpty()) {
+            if (validTagged.isNotEmpty() || validExternal.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 HorizontalDivider(color = Slate100)
                 Spacer(modifier = Modifier.height(12.dp))
@@ -114,19 +136,16 @@ fun PartyCard(party: TastingParty, entries: List<TastingEntry>, onDelete: () -> 
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    party.taggedLiquorIds.forEach { lid ->
-                        val entry = entries.find { it.id == lid }
-                        if (entry != null) {
-                            Surface(
-                                color = Amber50,
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.clickable { onSelectLiquor(lid) }
-                            ) {
-                                Text("🍷 ${entry.name}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Amber800, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
-                            }
+                    validTagged.forEach { entry ->
+                        Surface(
+                            color = Amber50,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.clickable { onSelectLiquor(entry.id) }
+                        ) {
+                            Text("🍷 ${entry.name}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Amber800, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
                         }
                     }
-                    party.externalLiquors?.forEach { ext ->
+                    validExternal.forEach { ext ->
                         Surface(color = Slate100, shape = RoundedCornerShape(8.dp)) {
                             Text("✨ $ext", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Slate700, modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp))
                         }

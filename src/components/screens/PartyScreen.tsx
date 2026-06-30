@@ -93,35 +93,44 @@ export default function PartyScreen({
                 </div>
               )}
 
-              <div className="space-y-2 pt-1">
-                <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">함께 나눈 주류들</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {party.taggedLiquorIds.map(id => {
-                    const liq = entries.find(e => e.id === id);
-                    if (!liq) return null;
-                    return (
-                      <span
-                        key={id}
-                        onClick={() => {
-                          setSelectedEntryId(id);
-                          onScreenChange('detail');
-                        }}
-                        className="bg-slate-900 text-amber-400 border border-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 cursor-pointer hover:bg-slate-800 active:scale-95 transition-all shadow-2xs"
-                      >
-                        <span>🍷</span>
-                        <span>{liq.name}</span>
-                      </span>
-                    );
-                  })}
+              {(() => {
+                const validTagged = party.taggedLiquorIds
+                  .map(id => entries.find(e => e.id === id))
+                  .filter((liq): liq is TastingEntry => Boolean(liq));
+                const validExternal = party.externalLiquors || [];
 
-                  {party.externalLiquors?.map((ext, idx) => (
-                    <span key={idx} className="bg-rose-100 text-rose-900 border border-rose-200 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow-2xs">
-                      <span>🍾</span>
-                      <span>{ext} (외부/지참)</span>
-                    </span>
-                  ))}
-                </div>
-              </div>
+                if (validTagged.length === 0 && validExternal.length === 0) {
+                  return null;
+                }
+
+                return (
+                  <div className="space-y-2 pt-1 border-t border-slate-100 mt-2">
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">함께 나눈 주류들</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {validTagged.map(liq => (
+                        <span
+                          key={liq.id}
+                          onClick={() => {
+                            setSelectedEntryId(liq.id);
+                            onScreenChange('detail');
+                          }}
+                          className="bg-slate-900 text-amber-400 border border-slate-800 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 cursor-pointer hover:bg-slate-800 active:scale-95 transition-all shadow-2xs"
+                        >
+                          <span>🍷</span>
+                          <span>{liq.name}</span>
+                        </span>
+                      ))}
+
+                      {validExternal.map((ext, idx) => (
+                        <span key={idx} className="bg-rose-100 text-rose-900 border border-rose-200 text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow-2xs">
+                          <span>🍾</span>
+                          <span>{ext} (외부/지참)</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           ))
         )}
