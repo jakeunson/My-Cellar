@@ -20,7 +20,6 @@ export default function EditLiquorScreen({
   const [editName, setEditName] = useState(selectedEntry.name);
   const [editCategory, setEditCategory] = useState<LiquorCategory>(selectedEntry.category);
   const [editAbv, setEditAbv] = useState<string>(selectedEntry.abv.toString());
-  const [editAddedDate, setEditAddedDate] = useState<string>(selectedEntry.addedDate || '');
   const [editImageUrl, setEditImageUrl] = useState<string>(selectedEntry.imageUrl || '');
   const [editError, setEditError] = useState('');
 
@@ -28,7 +27,6 @@ export default function EditLiquorScreen({
     setEditName(selectedEntry.name);
     setEditCategory(selectedEntry.category);
     setEditAbv(selectedEntry.abv.toString());
-    setEditAddedDate(selectedEntry.addedDate || '');
     setEditImageUrl(selectedEntry.imageUrl || '');
     setEditError('');
   }, [selectedEntry]);
@@ -50,7 +48,6 @@ export default function EditLiquorScreen({
       name: editName.trim(),
       category: editCategory,
       abv: parsedAbv,
-      addedDate: editAddedDate || undefined,
       imageUrl: editImageUrl || undefined
     };
 
@@ -115,25 +112,14 @@ export default function EditLiquorScreen({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">도수 (ABV %)</label>
-            <input 
-              type="number" step="0.1" 
-              value={editAbv}
-              onChange={(e) => setEditAbv(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-800 shadow-2xs"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">셀러 등록 날짜</label>
-            <input 
-              type="date" 
-              value={editAddedDate}
-              onChange={(e) => setEditAddedDate(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-800 shadow-2xs"
-            />
-          </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">도수 (ABV %)</label>
+          <input 
+            type="number" step="0.1" 
+            value={editAbv}
+            onChange={(e) => setEditAbv(e.target.value)}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-800 shadow-2xs"
+          />
         </div>
 
         <div className="space-y-1.5">

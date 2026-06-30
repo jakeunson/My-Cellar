@@ -143,6 +143,7 @@ export default function PhoneSimulator({
                 onDeleteReview={onDeleteReview}
                 onOpenEdit={() => onScreenChange('edit_liquor')}
                 onOpenAddReview={() => onScreenChange('add_review')}
+                onUpdateLiquor={onUpdateLiquor}
               />
             )}
 

@@ -35,7 +35,7 @@ export default function AddLiquorScreen({ onAddLiquor, onScreenChange }: AddLiqu
       name: formName.trim(),
       category: formCategory,
       abv: parsedAbv,
-      addedDate: formAddedDate || undefined,
+      purchaseDates: formAddedDate ? [formAddedDate] : [],
       imageUrl: formImageUrl || undefined,
       reviews: [] // 시음 기록은 주류 등록 후 별도로 진행
     };
@@ -59,42 +59,40 @@ export default function AddLiquorScreen({ onAddLiquor, onScreenChange }: AddLiqu
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-sm font-extrabold text-slate-800">새 주류 등록</h1>
+        <span className="text-sm font-extrabold text-slate-800">새 주류 등록</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs pb-24 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs custom-scrollbar">
         {formError && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-3.5 py-3 rounded-xl text-xs font-bold flex items-center space-x-2">
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-3 flex items-center space-x-2 text-rose-800 font-bold shadow-2xs">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <span>{formError}</span>
           </div>
         )}
 
         <div className="space-y-1.5">
-          <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">술 이름</label>
+          <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">술 이름 (필수)</label>
           <input 
-            type="text" 
-            placeholder="예: 발베니 12년 더블우드"
+            type="text" placeholder="예: 맥캘란 12년 셰리 오크"
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3.5 text-sm font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-slate-800 focus:bg-white transition-all shadow-2xs"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3.5 text-sm font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:border-slate-800 shadow-2xs"
           />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">주종 선택</label>
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
-            {CATEGORIES.map((cat) => {
+        <div className="space-y-1.5">
+          <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">주류 종류</label>
+          <div className="grid grid-cols-4 gap-1.5">
+            {CATEGORIES.map(cat => {
               const isSelected = formCategory === cat;
               return (
                 <button
-                  key={cat}
-                  type="button"
+                  key={cat} type="button"
                   onClick={() => setFormCategory(cat)}
-                  className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center space-x-1 border ${
-                    isSelected
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  className={`py-2 px-1 rounded-xl text-[10px] font-extrabold flex flex-col items-center space-y-1 border transition-all active:scale-95 ${
+                    isSelected 
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-sm' 
+                      : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
                   <span>{getCategoryEmoji(cat)}</span>
@@ -116,7 +114,7 @@ export default function AddLiquorScreen({ onAddLiquor, onScreenChange }: AddLiqu
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">셀러 등록 날짜</label>
+            <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">📅 최초 구매일</label>
             <input 
               type="date" 
               value={formAddedDate}

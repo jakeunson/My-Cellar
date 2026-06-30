@@ -12,6 +12,7 @@ interface DetailScreenProps {
   onDeleteReview: (liquorId: string, reviewId: string) => void;
   onOpenEdit: () => void;
   onOpenAddReview: () => void;
+  onUpdateLiquor?: (entry: TastingEntry) => void;
 }
 
 // 오각 레이더 차트 컴포넌트
@@ -112,7 +113,8 @@ export default function DetailScreen({
   onDeleteLiquor,
   onDeleteReview,
   onOpenEdit,
-  onOpenAddReview
+  onOpenAddReview,
+  onUpdateLiquor
 }: DetailScreenProps) {
   if (!selectedEntry) return null;
 
@@ -168,10 +170,64 @@ export default function DetailScreen({
           <div className="flex flex-wrap justify-center gap-2 mt-2.5">
             <span className="bg-slate-800 px-3 py-1 rounded-full text-xs font-bold text-amber-400 border border-slate-700">{getCategoryName(selectedEntry.category)}</span>
             <span className="bg-slate-800 px-3 py-1 rounded-full text-xs font-bold text-slate-300 border border-slate-700">ABV {selectedEntry.abv}%</span>
-            {selectedEntry.addedDate && (
-              <span className="bg-slate-800 px-3 py-1 rounded-full text-xs font-bold text-slate-300 border border-slate-700">📅 {selectedEntry.addedDate}</span>
+          </div>
+        </div>
+
+        {/* 📦 구매 및 소장 기록 섹션 */}
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 space-y-3.5 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <span className="font-black text-slate-900 text-sm flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-amber-600" />
+              <span>구매 및 소장 기록 ({selectedEntry.purchaseDates?.length || 0}병)</span>
+            </span>
+            {onUpdateLiquor && (
+              <button
+                onClick={() => {
+                  const dateStr = prompt('새 구매 날짜를 입력해주세요 (YYYY-MM-DD)', new Date().toISOString().split('T')[0]);
+                  if (dateStr && dateStr.trim()) {
+                    const updated = {
+                      ...selectedEntry,
+                      purchaseDates: [...(selectedEntry.purchaseDates || []), dateStr.trim()].sort((a, b) => b.localeCompare(a))
+                    };
+                    onUpdateLiquor(updated);
+                  }
+                }}
+                className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 text-[10px] font-black px-2 py-1.5 rounded-lg flex items-center gap-1 transition-all"
+              >
+                <Plus className="w-3 h-3 stroke-[3]" />
+                <span>구매 추가</span>
+              </button>
             )}
           </div>
+
+          {!selectedEntry.purchaseDates || selectedEntry.purchaseDates.length === 0 ? (
+            <p className="text-slate-400 font-bold text-center py-2">등록된 구매일 정보가 없습니다.</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {selectedEntry.purchaseDates.map((date, idx) => (
+                <div key={idx} className="bg-slate-50 border border-slate-200 text-slate-700 font-bold px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                  <span>📅 {date}</span>
+                  {onUpdateLiquor && (
+                    <button
+                      onClick={() => {
+                        if (confirm('이 구매 기록을 삭제하시겠습니까?')) {
+                          const updated = {
+                            ...selectedEntry,
+                            purchaseDates: selectedEntry.purchaseDates.filter((_, i) => i !== idx)
+                          };
+                          onUpdateLiquor(updated);
+                        }
+                      }}
+                      className="text-slate-400 hover:text-red-500 font-black text-xs transition-colors ml-1"
+                      title="구매 기록 삭제"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Radar Chart or Empty Review Banner */}

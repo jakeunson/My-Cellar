@@ -172,12 +172,15 @@ export default function HomeScreen({
                   </div>
                 </div>
                 
-                <div className="flex flex-col items-end shrink-0 pl-2">
+                <div className="flex flex-col items-end shrink-0 pl-2 space-y-1.5">
                   <div className="flex items-center space-x-1 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60 shadow-2xs">
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                     <span className="text-xs font-extrabold text-amber-800">{avgRating}</span>
                   </div>
-                  <span className="text-xs font-bold text-slate-400 mt-1.5">{reviewCount}회 시음</span>
+                  <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200/40">
+                    🛒 {entry.purchaseDates?.length || 0}병 보유
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400">{reviewCount}회 시음</span>
                 </div>
               </div>
             );

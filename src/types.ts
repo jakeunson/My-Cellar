@@ -22,7 +22,7 @@ export interface TastingEntry {
   name: string;
   category: LiquorCategory;
   abv: number; // %
-  addedDate?: string; // YYYY-MM-DD
+  purchaseDates: string[]; // 구매 날짜 목록 (다중 구매 지원)
   imageUrl?: string; // 주류 대표 이미지
   reviews: TastingReview[];
 }
