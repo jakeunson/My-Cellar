@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Edit, Trash2, Calendar, Star, PartyPopper, MessageSquarePlus } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Calendar, Star, PartyPopper, MessageSquarePlus, Plus } from 'lucide-react';
 import { TastingEntry, TastingParty, FlavorProfile } from '../../types';
 import { getCategoryEmoji, getCategoryName, getAverageFlavors } from '../../utils/liquorUtils';
 
@@ -92,7 +92,7 @@ function RadarChart({ flavors }: { flavors: FlavorProfile }) {
                   y={labelY}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  className="text-[10px] font-extrabold fill-slate-700 select-none"
+                  className="text-[11px] font-black fill-white select-none drop-shadow-sm"
                 >
                   {cat.label}
                 </text>
@@ -165,28 +165,52 @@ export default function DetailScreen({
             <span className="text-5xl block mb-2">{getCategoryEmoji(selectedEntry.category)}</span>
           )}
           <h2 className="text-base font-black tracking-tight">{selectedEntry.name}</h2>
-          <div className="flex justify-center gap-2 mt-2.5">
+          <div className="flex flex-wrap justify-center gap-2 mt-2.5">
             <span className="bg-slate-800 px-3 py-1 rounded-full text-xs font-bold text-amber-400 border border-slate-700">{getCategoryName(selectedEntry.category)}</span>
             <span className="bg-slate-800 px-3 py-1 rounded-full text-xs font-bold text-slate-300 border border-slate-700">ABV {selectedEntry.abv}%</span>
+            {selectedEntry.addedDate && (
+              <span className="bg-slate-800 px-3 py-1 rounded-full text-xs font-bold text-slate-300 border border-slate-700">📅 {selectedEntry.addedDate}</span>
+            )}
           </div>
         </div>
 
-        {/* Radar Chart */}
-        <RadarChart flavors={getAverageFlavors(selectedEntry.reviews)} />
+        {/* Radar Chart or Empty Review Banner */}
+        {!selectedEntry.reviews || selectedEntry.reviews.length === 0 ? (
+          <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-5 text-center space-y-3 shadow-2xs">
+            <div>
+              <p className="font-black text-amber-900 text-sm">✨ 아직 등록된 시음 기록이 없습니다</p>
+              <p className="font-bold text-amber-700 text-xs mt-1">버튼을 눌러 첫 시음 평가를 기록해보세요!</p>
+            </div>
+            <button
+              onClick={onOpenAddReview}
+              className="w-8 h-8 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl font-black shadow-sm inline-flex items-center justify-center transition-all"
+              title="시음 기록 추가"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+            </button>
+          </div>
+        ) : (
+          <RadarChart flavors={getAverageFlavors(selectedEntry.reviews)} />
+        )}
 
         {/* Reviews Timeline Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
           <span className="font-black text-slate-900 text-sm flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-amber-600" />
             <span>날짜별 시음 기록 ({selectedEntry.reviews?.length || 0}회)</span>
           </span>
+          <button
+            onClick={onOpenAddReview}
+            className="w-8 h-8 bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 rounded-xl font-black shadow-sm flex items-center justify-center transition-all"
+            title="시음 기록 추가"
+          >
+            <Plus className="w-4 h-4 stroke-[3]" />
+          </button>
         </div>
 
         {/* Reviews List */}
         <div className="space-y-4">
-          {!selectedEntry.reviews || selectedEntry.reviews.length === 0 ? (
-            <p className="text-center text-slate-400 py-6 font-bold text-sm">아직 시음 기록이 없습니다.</p>
-          ) : (
+          {!selectedEntry.reviews || selectedEntry.reviews.length === 0 ? null : (
             selectedEntry.reviews.map((rev) => (
               <div key={rev.id} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3 relative group shadow-2xs">
                 <div className="flex items-center justify-between">
@@ -249,17 +273,6 @@ export default function DetailScreen({
             </div>
           </div>
         )}
-      </div>
-
-      {/* Add Review Button Bottom Bar */}
-      <div className="absolute bottom-4 left-4 right-4 z-10">
-        <button
-          onClick={onOpenAddReview}
-          className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white py-4 rounded-2xl font-black text-sm shadow-xl flex items-center justify-center gap-2 transition-all border-2 border-amber-400"
-        >
-          <MessageSquarePlus className="w-5 h-5 stroke-[2.5]" />
-          <span>새 날짜 시음 후기 추가</span>
-        </button>
       </div>
     </motion.div>
   );

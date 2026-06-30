@@ -25,6 +25,8 @@ export const getCategoryName = (cat: LiquorCategory): string => {
   }
 };
 
+export const getCategoryKorean = getCategoryName;
+
 export const getAverageRating = (reviews?: TastingReview[]): number => {
   if (!reviews || reviews.length === 0) return 0;
   const sum = reviews.reduce((acc, r) => acc + r.rating, 0);

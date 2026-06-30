@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, AlertTriangle, Camera } from 'lucide-react';
 import { TastingEntry, LiquorCategory } from '../../types';
-import { handleImageUpload } from '../../utils/liquorUtils';
+import { handleImageUpload, getCategoryKorean, getCategoryEmoji } from '../../utils/liquorUtils';
 
 interface EditLiquorScreenProps {
   selectedEntry: TastingEntry;
   onUpdateLiquor?: (entry: TastingEntry) => void;
   onScreenChange: (screen: string) => void;
 }
+
+const CATEGORIES: LiquorCategory[] = ['Whiskey', 'Wine', 'Beer', 'Sake', 'Korean', 'Cocktail', 'Other'];
 
 export default function EditLiquorScreen({
   selectedEntry,
@@ -18,6 +20,7 @@ export default function EditLiquorScreen({
   const [editName, setEditName] = useState(selectedEntry.name);
   const [editCategory, setEditCategory] = useState<LiquorCategory>(selectedEntry.category);
   const [editAbv, setEditAbv] = useState<string>(selectedEntry.abv.toString());
+  const [editAddedDate, setEditAddedDate] = useState<string>(selectedEntry.addedDate || '');
   const [editImageUrl, setEditImageUrl] = useState<string>(selectedEntry.imageUrl || '');
   const [editError, setEditError] = useState('');
 
@@ -25,6 +28,7 @@ export default function EditLiquorScreen({
     setEditName(selectedEntry.name);
     setEditCategory(selectedEntry.category);
     setEditAbv(selectedEntry.abv.toString());
+    setEditAddedDate(selectedEntry.addedDate || '');
     setEditImageUrl(selectedEntry.imageUrl || '');
     setEditError('');
   }, [selectedEntry]);
@@ -46,6 +50,7 @@ export default function EditLiquorScreen({
       name: editName.trim(),
       category: editCategory,
       abv: parsedAbv,
+      addedDate: editAddedDate || undefined,
       imageUrl: editImageUrl || undefined
     };
 
@@ -86,21 +91,31 @@ export default function EditLiquorScreen({
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">주종 종류</label>
-            <select 
-              value={editCategory}
-              onChange={(e) => setEditCategory(e.target.value as LiquorCategory)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-800 shadow-2xs"
-            >
-              <option value="Whiskey">🥃 위스키</option>
-              <option value="Wine">🍷 와인</option>
-              <option value="Beer">🍺 맥주</option>
-              <option value="Korean">🍶 전통주</option>
-              <option value="Cocktail">🍸 칵테일</option>
-            </select>
+        <div className="space-y-2">
+          <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">주종 선택</label>
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
+            {CATEGORIES.map((cat) => {
+              const isSelected = editCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setEditCategory(cat)}
+                  className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center space-x-1 border ${
+                    isSelected
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>{getCategoryEmoji(cat)}</span>
+                  <span>{getCategoryKorean(cat)}</span>
+                </button>
+              );
+            })}
           </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">도수 (ABV %)</label>
             <input 
@@ -108,6 +123,15 @@ export default function EditLiquorScreen({
               value={editAbv}
               onChange={(e) => setEditAbv(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-800 shadow-2xs"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">셀러 등록 날짜</label>
+            <input 
+              type="date" 
+              value={editAddedDate}
+              onChange={(e) => setEditAddedDate(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3 text-sm font-bold text-slate-800 focus:outline-none focus:border-slate-800 shadow-2xs"
             />
           </div>
         </div>

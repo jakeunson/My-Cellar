@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, AlertTriangle, Medal, PlusCircle, MinusCircle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Medal, Plus, Trash2, Search } from 'lucide-react';
 import { TastingEntry, RankingRecord } from '../../types';
 import { getCategoryName } from '../../utils/liquorUtils';
 
@@ -10,6 +10,15 @@ interface AddRankingScreenProps {
   onScreenChange: (screen: string) => void;
 }
 
+interface RankEditItem {
+  id: string;
+  rank: number;
+  liquorId: string;
+  comment: string;
+  searchQuery: string;
+  isSelecting: boolean;
+}
+
 export default function AddRankingScreen({
   entries,
   onAddRankingRecord,
@@ -17,45 +26,51 @@ export default function AddRankingScreen({
 }: AddRankingScreenProps) {
   const [rankingDate, setRankingDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [rankingTitle, setRankingTitle] = useState('🏆 오늘의 최애 주류 순위');
-  const [rankingItems, setRankingItems] = useState<{ liquorId: string; rank: number; comment?: string }[]>([]);
-  const [selectedLiquorToAdd, setSelectedLiquorToAdd] = useState('');
-  const [rankingComment, setRankingComment] = useState('');
   const [rankingError, setRankingError] = useState('');
 
-  const handleAddItemToRanking = () => {
-    if (!selectedLiquorToAdd) {
-      setRankingError('순위에 추가할 술을 선택해주세요.');
-      return;
+  const [items, setItems] = useState<RankEditItem[]>(() => {
+    if (entries.length > 0) {
+      return [
+        { id: 'rank-1', rank: 1, liquorId: entries[0].id, comment: '', searchQuery: '', isSelecting: false },
+        { id: 'rank-2', rank: 2, liquorId: entries[1]?.id || entries[0].id, comment: '', searchQuery: '', isSelecting: false }
+      ];
     }
-    if (rankingItems.some(i => i.liquorId === selectedLiquorToAdd)) {
-      setRankingError('이미 순위에 등록된 술입니다.');
-      return;
-    }
-    const nextRank = rankingItems.length + 1;
-    setRankingItems([...rankingItems, { liquorId: selectedLiquorToAdd, rank: nextRank, comment: rankingComment.trim() || undefined }]);
-    setSelectedLiquorToAdd('');
-    setRankingComment('');
-    setRankingError('');
+    return [{ id: 'rank-1', rank: 1, liquorId: '', comment: '', searchQuery: '', isSelecting: true }];
+  });
+
+  const updateItem = (index: number, partial: Partial<RankEditItem>) => {
+    setItems(prev => prev.map((it, idx) => idx === index ? { ...it, ...partial } : it));
   };
 
-  const handleRemoveItemFromRanking = (liquorId: string) => {
-    const updated = rankingItems
-      .filter(i => i.liquorId !== liquorId)
-      .map((item, idx) => ({ ...item, rank: idx + 1 }));
-    setRankingItems(updated);
+  const deleteItem = (index: number) => {
+    setItems(prev => prev.filter((_, idx) => idx !== index).map((it, idx) => ({ ...it, rank: idx + 1 })));
+  };
+
+  const addRank = () => {
+    setItems(prev => [
+      ...prev,
+      { id: 'rank-' + Date.now(), rank: prev.length + 1, liquorId: '', comment: '', searchQuery: '', isSelecting: true }
+    ]);
   };
 
   const handleSaveRankingSnapshot = () => {
     if (!onAddRankingRecord) return;
-    if (rankingItems.length === 0) {
-      setRankingError('최소 1개 이상의 술을 순위에 등록해주세요.');
+    const validItems = items.filter(it => it.liquorId.trim() !== '').map(it => ({
+      liquorId: it.liquorId,
+      rank: it.rank,
+      comment: it.comment.trim() || undefined
+    }));
+
+    if (validItems.length === 0) {
+      setRankingError('최소 1개 이상의 주류 순위를 지정해주세요.');
       return;
     }
+
     const newRecord: RankingRecord = {
       id: 'rank-' + Date.now(),
       date: rankingDate || new Date().toISOString().split('T')[0],
       title: rankingTitle.trim() || '🏆 나의 주류 명예의 전당',
-      items: rankingItems
+      items: validItems
     };
     onAddRankingRecord(newRecord);
     onScreenChange('ranking');
@@ -73,7 +88,7 @@ export default function AddRankingScreen({
         <button onClick={() => onScreenChange('ranking')} className="p-2.5 hover:bg-slate-100 active:scale-95 rounded-full transition-all text-slate-700">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-sm font-extrabold text-slate-800">새 랭킹 스냅샷 등록</h1>
+        <h1 className="text-sm font-extrabold text-slate-800">새 명예의 전당 등록</h1>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs pb-24 custom-scrollbar">
@@ -88,90 +103,131 @@ export default function AddRankingScreen({
           <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">기준 날짜</label>
           <input 
             type="date" value={rankingDate} onChange={(e) => setRankingDate(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3.5 font-bold text-slate-800 text-sm shadow-2xs"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-3.5 font-bold text-slate-800 text-sm shadow-2xs"
           />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">랭킹 제목</label>
+          <label className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">테마 제목</label>
           <input 
-            type="text" placeholder="예: 2026 여름 최애 위스키 순위"
+            type="text" placeholder="예: 6월 최애 위스키 TOP 3"
             value={rankingTitle} onChange={(e) => setRankingTitle(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3.5 px-3.5 font-bold text-slate-800 text-sm shadow-2xs"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-3.5 font-bold text-slate-800 text-sm shadow-2xs"
           />
         </div>
 
         <hr className="border-slate-200" />
 
-        <div className="space-y-3 bg-amber-50/60 p-4 rounded-2xl border border-amber-200/60 shadow-2xs">
-          <h3 className="text-xs font-extrabold text-amber-800 uppercase tracking-widest flex items-center gap-1.5">
-            <Medal className="w-4 h-4 text-amber-600" />
-            <span>1위부터 순서대로 추가하기</span>
-          </h3>
+        {/* Dynamic Ranks List */}
+        <div className="space-y-4">
+          {items.map((item, index) => {
+            const selectedEntry = entries.find(e => e.id === item.liquorId);
+            const filteredEntries = entries.filter(e =>
+              item.searchQuery.trim() === '' ||
+              e.name.toLowerCase().includes(item.searchQuery.toLowerCase()) ||
+              e.category.toLowerCase().includes(item.searchQuery.toLowerCase())
+            );
 
-          <div className="space-y-2">
-            <select
-              value={selectedLiquorToAdd}
-              onChange={(e) => setSelectedLiquorToAdd(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-3.5 px-3 font-bold text-slate-800 text-sm focus:outline-none focus:border-amber-500 shadow-2xs"
-            >
-              <option value="">-- 순위에 추가할 술 선택 --</option>
-              {entries.map(e => (
-                <option key={e.id} value={e.id}>{e.name} ({getCategoryName(e.category)})</option>
-              ))}
-            </select>
-            <input
-              type="text" placeholder="선정 이유 짧은 메모 (선택)"
-              value={rankingComment} onChange={(e) => setRankingComment(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-3.5 text-xs font-medium shadow-2xs"
-            />
-            <button
-              type="button" onClick={handleAddItemToRanking}
-              className="w-full bg-slate-900 hover:bg-slate-800 active:scale-95 text-white py-3.5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md transition-all mt-1"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>{rankingItems.length + 1}위로 추가하기</span>
-            </button>
-          </div>
-        </div>
+            return (
+              <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 shadow-2xs">
+                {/* Rank Header */}
+                <div className="flex items-center justify-between">
+                  <span className={`px-3 py-1 rounded-lg text-white font-black text-xs ${
+                    item.rank === 1 ? 'bg-amber-500' :
+                    item.rank === 2 ? 'bg-slate-400' :
+                    item.rank === 3 ? 'bg-amber-700' : 'bg-slate-800'
+                  }`}>
+                    {item.rank}위 주류
+                  </span>
+                  {items.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => deleteItem(index)}
+                      className="text-slate-400 hover:text-red-600 active:scale-95 p-1 rounded-lg hover:bg-red-50 transition-all"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
 
-        <div className="space-y-2.5">
-          <h4 className="text-xs font-extrabold text-slate-500 uppercase tracking-widest">
-            현재 선정된 순위 ({rankingItems.length}개)
-          </h4>
-          {rankingItems.length === 0 ? (
-            <p className="text-center text-slate-400 py-6 font-medium text-xs">위 박스에서 술을 선택해 순위를 채워보세요.</p>
-          ) : (
-            rankingItems.map((item) => {
-              const liq = entries.find(e => e.id === item.liquorId);
-              return (
-                <div key={item.liquorId} className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200 shadow-2xs">
-                  <div className="flex items-center space-x-3">
-                    <span className="w-7 h-7 rounded-lg bg-amber-500 text-white font-black flex items-center justify-center text-sm shadow-sm shrink-0">
-                      {item.rank}
-                    </span>
+                {/* Liquor Picker / Selected State */}
+                {selectedEntry && !item.isSelecting ? (
+                  <div className="bg-white border border-slate-200 rounded-xl p-3 flex items-center justify-between">
                     <div>
-                      <h5 className="font-black text-slate-900 text-sm">{liq?.name}</h5>
-                      {item.comment && <p className="text-xs text-slate-500 mt-0.5 font-medium">{item.comment}</p>}
+                      <h4 className="font-black text-slate-900 text-sm">{selectedEntry.name}</h4>
+                      <span className="text-[11px] font-bold text-slate-400">{getCategoryName(selectedEntry.category)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateItem(index, { isSelecting: true })}
+                      className="bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-slate-800 active:scale-95 transition-all"
+                    >
+                      변경
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-white border border-amber-400 rounded-xl p-3 space-y-2.5">
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                      <input
+                        type="text"
+                        placeholder="🔍 주류 이름 또는 종류 검색..."
+                        value={item.searchQuery}
+                        onChange={(e) => updateItem(index, { searchQuery: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-9 pr-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div className="max-h-40 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                      {filteredEntries.length === 0 ? (
+                        <p className="text-center text-slate-400 py-3 text-xs">검색된 주류가 없습니다.</p>
+                      ) : (
+                        filteredEntries.map(e => (
+                          <div
+                            key={e.id}
+                            onClick={() => updateItem(index, { liquorId: e.id, isSelecting: false, searchQuery: '' })}
+                            className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                              item.liquorId === e.id ? 'bg-amber-50 border-amber-500' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                            }`}
+                          >
+                            <span className="font-bold text-slate-800 text-xs">{e.name}</span>
+                            <span className="text-[11px] font-medium text-slate-500">{getCategoryName(e.category)}</span>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
-                  <button
-                    type="button" onClick={() => handleRemoveItemFromRanking(item.liquorId)}
-                    className="text-slate-400 hover:text-red-600 active:scale-95 p-2 rounded-lg hover:bg-red-50 transition-all"
-                  >
-                    <MinusCircle className="w-5 h-5" />
-                  </button>
-                </div>
-              );
-            })
-          )}
+                )}
+
+                {/* Comment Input */}
+                <input
+                  type="text"
+                  placeholder={`${item.rank}위 선정 이유 / 코멘트 (선택)`}
+                  value={item.comment}
+                  onChange={(e) => updateItem(index, { comment: e.target.value })}
+                  className="w-full bg-white border border-slate-200 rounded-xl py-2.5 px-3 font-medium text-slate-800 text-xs focus:outline-none focus:border-amber-500"
+                />
+              </div>
+            );
+          })}
         </div>
 
+        {/* Add Rank Button */}
+        <button
+          type="button"
+          onClick={addRank}
+          className="w-full bg-white hover:bg-slate-50 active:scale-95 text-slate-900 border-2 border-slate-900 py-3.5 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all"
+        >
+          <Plus className="w-4 h-4 stroke-[3]" />
+          <span>순위 추가 (다음 순위 생성)</span>
+        </button>
+
+        {/* Submit Button */}
         <button
           type="button" onClick={handleSaveRankingSnapshot}
-          className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-white py-4 rounded-2xl font-black text-sm shadow-xl mt-4 transition-all"
+          className="w-full bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 py-4 rounded-2xl font-black text-sm shadow-xl transition-all"
         >
-          랭킹 스냅샷 저장하기
+          명예의 전당 등록하기
         </button>
       </div>
     </motion.div>
