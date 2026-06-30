@@ -71,6 +71,7 @@ fun PartyScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PartyCard(party: TastingParty, entries: List<TastingEntry>, onDelete: () -> Unit, onSelectLiquor: (String) -> Unit) {
     Card(
@@ -108,7 +109,11 @@ fun PartyCard(party: TastingParty, entries: List<TastingEntry>, onDelete: () -> 
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("🍾 함께 즐긴 주류", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Slate500)
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     party.taggedLiquorIds.forEach { lid ->
                         val entry = entries.find { it.id == lid }
                         if (entry != null) {

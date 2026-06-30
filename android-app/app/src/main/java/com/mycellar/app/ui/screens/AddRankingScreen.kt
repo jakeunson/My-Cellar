@@ -5,6 +5,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mycellar.app.data.LiquorCategory
 import com.mycellar.app.data.RankingItem
 import com.mycellar.app.data.RankingRecord
 import com.mycellar.app.data.TastingEntry
@@ -32,48 +35,156 @@ data class RankEditItem(
     val rank: Int,
     val liquorId: String = "",
     val comment: String = "",
-    val searchQuery: String = "",
-    val isSelecting: Boolean = true
+    val isSelecting: Boolean = false
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AddRankingScreen(entries: List<TastingEntry>, onAddRecord: (RankingRecord) -> Unit, onBack: () -> Unit) {
+fun AddRankingScreen(
+    entries: List<TastingEntry>,
+    onAddRecord: (RankingRecord) -> Unit,
+    onBack: () -> Unit
+) {
     var title by remember { mutableStateOf("") }
     var date by remember { mutableStateOf(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())) }
-    
-    var items by remember {
+    var rankItems by remember {
         mutableStateOf(
-            if (entries.isNotEmpty()) {
-                listOf(
-                    RankEditItem(rank = 1, liquorId = entries.first().id, isSelecting = false),
-                    RankEditItem(rank = 2, liquorId = entries.getOrNull(1)?.id ?: entries.first().id, isSelecting = false)
-                )
-            } else {
-                listOf(RankEditItem(rank = 1, isSelecting = true))
-            }
+            listOf(
+                RankEditItem(rank = 1),
+                RankEditItem(rank = 2),
+                RankEditItem(rank = 3)
+            )
         )
     }
 
-    fun updateItem(index: Int, update: (RankEditItem) -> RankEditItem) {
-        items = items.mapIndexed { idx, item -> if (idx == index) update(item) else item }
-    }
+    var activeSelectingIndex by remember { mutableStateOf<Int?>(null) }
+    var modalSearchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<LiquorCategory?>(null) }
 
-    fun deleteItem(index: Int) {
-        val updated = items.filterIndexed { idx, _ -> idx != index }
-            .mapIndexed { idx, item -> item.copy(rank = idx + 1) }
-        items = updated
+    fun updateItem(index: Int, update: (RankEditItem) -> RankEditItem) {
+        rankItems = rankItems.mapIndexed { idx, item ->
+            if (idx == index) update(item) else item
+        }
     }
 
     fun addRank() {
-        val nextRank = items.size + 1
-        items = items + RankEditItem(rank = nextRank, isSelecting = true)
+        val nextRank = rankItems.size + 1
+        rankItems = rankItems + RankEditItem(rank = nextRank)
+    }
+
+    fun deleteItem(index: Int) {
+        val newItems = rankItems.filterIndexed { idx, _ -> idx != index }
+        rankItems = newItems.mapIndexed { idx, item -> item.copy(rank = idx + 1) }
+    }
+
+    if (activeSelectingIndex != null) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { activeSelectingIndex = null },
+            sheetState = sheetState,
+            containerColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    "${activeSelectingIndex!! + 1}위 주류 선택",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Slate900
+                )
+
+                OutlinedTextField(
+                    value = modalSearchQuery,
+                    onValueChange = { modalSearchQuery = it },
+                    placeholder = { Text("🔍 주류 이름 또는 종류 검색...", fontSize = 13.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // Category Filter Chips
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(
+                        selected = selectedCategory == null,
+                        onClick = { selectedCategory = null },
+                        label = { Text("전체") }
+                    )
+                    LiquorCategory.values().forEach { cat ->
+                        FilterChip(
+                            selected = selectedCategory == cat,
+                            onClick = { selectedCategory = cat },
+                            label = { Text(getCategoryKorean(cat)) }
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = Slate200)
+
+                val filteredEntries = entries.filter { e ->
+                    val matchCat = selectedCategory == null || e.category == selectedCategory
+                    val matchQuery = modalSearchQuery.isBlank() ||
+                            e.name.contains(modalSearchQuery, ignoreCase = true) ||
+                            getCategoryKorean(e.category).contains(modalSearchQuery, ignoreCase = true)
+                    matchCat && matchQuery
+                }
+
+                if (filteredEntries.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+                        Text("조건에 맞는 주류가 없습니다.", color = Slate400, fontSize = 14.sp)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 400.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredEntries) { e ->
+                            val currentIdx = activeSelectingIndex!!
+                            val isCurrentSelected = rankItems.getOrNull(currentIdx)?.liquorId == e.id
+                            Surface(
+                                color = if (isCurrentSelected) Amber50 else Slate50,
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, if (isCurrentSelected) Amber500 else Slate200),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        updateItem(currentIdx) {
+                                            it.copy(liquorId = e.id, isSelecting = false)
+                                        }
+                                        activeSelectingIndex = null
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(e.name, fontWeight = FontWeight.Bold, color = Slate900, fontSize = 14.sp)
+                                        Text(getCategoryKorean(e.category), fontWeight = FontWeight.Medium, color = Slate500, fontSize = 12.sp)
+                                    }
+                                    if (isCurrentSelected) {
+                                        Text("✓ 선택됨", fontWeight = FontWeight.Black, color = Amber800, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("새 명예의 전당 등록", fontWeight = FontWeight.Black, color = Slate900) },
+                title = { Text("명예의 전당 등록", fontWeight = FontWeight.Black, color = Slate900) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "뒤로가기", tint = Slate900)
@@ -108,8 +219,7 @@ fun AddRankingScreen(entries: List<TastingEntry>, onAddRecord: (RankingRecord) -
 
             HorizontalDivider(color = Slate200)
 
-            // Dynamic Ranks List
-            items.forEachIndexed { index, item ->
+            rankItems.forEachIndexed { index, item ->
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Slate50),
                     shape = RoundedCornerShape(16.dp),
@@ -120,7 +230,6 @@ fun AddRankingScreen(entries: List<TastingEntry>, onAddRecord: (RankingRecord) -
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Rank Header & Delete Button
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -143,7 +252,7 @@ fun AddRankingScreen(entries: List<TastingEntry>, onAddRecord: (RankingRecord) -
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
-                            if (items.size > 1) {
+                            if (rankItems.size > 1) {
                                 IconButton(
                                     onClick = { deleteItem(index) },
                                     modifier = Modifier.size(32.dp)
@@ -158,9 +267,8 @@ fun AddRankingScreen(entries: List<TastingEntry>, onAddRecord: (RankingRecord) -
                             }
                         }
 
-                        // Selected Liquor Display or Search & List Picker
                         val selectedEntry = entries.find { it.id == item.liquorId }
-                        if (selectedEntry != null && !item.isSelecting) {
+                        if (selectedEntry != null) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -175,7 +283,11 @@ fun AddRankingScreen(entries: List<TastingEntry>, onAddRecord: (RankingRecord) -
                                     Text(text = getCategoryKorean(selectedEntry.category), fontWeight = FontWeight.Bold, color = Slate500, fontSize = 12.sp)
                                 }
                                 Button(
-                                    onClick = { updateItem(index) { it.copy(isSelecting = true) } },
+                                    onClick = {
+                                        modalSearchQuery = ""
+                                        selectedCategory = null
+                                        activeSelectingIndex = index
+                                    },
                                     colors = ButtonDefaults.buttonColors(containerColor = Slate900, contentColor = Color.White),
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -185,74 +297,18 @@ fun AddRankingScreen(entries: List<TastingEntry>, onAddRecord: (RankingRecord) -
                                 }
                             }
                         } else {
-                            // Search Box + Filtered List View
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(Color.White, RoundedCornerShape(12.dp))
-                                    .border(1.dp, Amber400, RoundedCornerShape(12.dp))
-                                    .padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            Button(
+                                onClick = {
+                                    modalSearchQuery = ""
+                                    selectedCategory = null
+                                    activeSelectingIndex = index
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Amber50, contentColor = Amber800),
+                                border = BorderStroke(1.dp, Amber400),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth().height(48.dp)
                             ) {
-                                OutlinedTextField(
-                                    value = item.searchQuery,
-                                    onValueChange = { q -> updateItem(index) { it.copy(searchQuery = q) } },
-                                    placeholder = { Text("🔍 주류 이름 또는 종류 검색...", fontSize = 13.sp) },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(10.dp)
-                                )
-
-                                val filteredEntries = entries.filter { e ->
-                                    item.searchQuery.isBlank() ||
-                                            e.name.contains(item.searchQuery, ignoreCase = true) ||
-                                            getCategoryKorean(e.category).contains(item.searchQuery, ignoreCase = true)
-                                }
-
-                                if (filteredEntries.isEmpty()) {
-                                    Text(
-                                        text = "검색된 주류가 없습니다.",
-                                        color = Slate400,
-                                        fontSize = 12.sp,
-                                        modifier = Modifier.padding(vertical = 8.dp)
-                                    )
-                                } else {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .heightIn(max = 180.dp)
-                                            .verticalScroll(rememberScrollState()),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        filteredEntries.forEach { e ->
-                                            Surface(
-                                                color = if (item.liquorId == e.id) Amber50 else Slate50,
-                                                shape = RoundedCornerShape(8.dp),
-                                                border = BorderStroke(1.dp, if (item.liquorId == e.id) Amber500 else Slate200),
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clickable {
-                                                        updateItem(index) {
-                                                            it.copy(
-                                                                liquorId = e.id,
-                                                                isSelecting = false,
-                                                                searchQuery = ""
-                                                            )
-                                                        }
-                                                    }
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(text = e.name, fontWeight = FontWeight.Bold, color = Slate900, fontSize = 13.sp)
-                                                    Text(text = getCategoryKorean(e.category), fontWeight = FontWeight.Medium, color = Slate500, fontSize = 11.sp)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                Text("+ 셀러에서 주류 선택하기", fontWeight = FontWeight.Black)
                             }
                         }
 
@@ -285,7 +341,7 @@ fun AddRankingScreen(entries: List<TastingEntry>, onAddRecord: (RankingRecord) -
             // Submit Button
             Button(
                 onClick = {
-                    val validItems = items.filter { it.liquorId.isNotBlank() }.map {
+                    val validItems = rankItems.filter { it.liquorId.isNotBlank() }.map {
                         RankingItem(it.liquorId, it.rank, it.comment.ifBlank { null })
                     }
                     if (title.isNotBlank() && validItems.isNotEmpty()) {
