@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ArrowLeft, Edit, Trash2, Calendar, Star, PartyPopper, MessageSquarePlus, Plus } from 'lucide-react';
 import { TastingEntry, TastingParty, FlavorProfile } from '../../types';
@@ -93,7 +93,7 @@ function RadarChart({ flavors }: { flavors: FlavorProfile }) {
                   y={labelY}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  className="text-[11px] font-black fill-white select-none drop-shadow-sm"
+                  className="text-[11px] font-bold fill-slate-700 select-none"
                 >
                   {cat.label}
                 </text>
@@ -116,6 +116,9 @@ export default function DetailScreen({
   onOpenAddReview,
   onUpdateLiquor
 }: DetailScreenProps) {
+  const [showAddDateModal, setShowAddDateModal] = useState(false);
+  const [newDateInput, setNewDateInput] = useState(new Date().toISOString().split('T')[0]);
+
   if (!selectedEntry) return null;
 
   return (
@@ -183,14 +186,8 @@ export default function DetailScreen({
             {onUpdateLiquor && (
               <button
                 onClick={() => {
-                  const dateStr = prompt('새 구매 날짜를 입력해주세요 (YYYY-MM-DD)', new Date().toISOString().split('T')[0]);
-                  if (dateStr && dateStr.trim()) {
-                    const updated = {
-                      ...selectedEntry,
-                      purchaseDates: [...(selectedEntry.purchaseDates || []), dateStr.trim()].sort((a, b) => b.localeCompare(a))
-                    };
-                    onUpdateLiquor(updated);
-                  }
+                  setNewDateInput(new Date().toISOString().split('T')[0]);
+                  setShowAddDateModal(true);
                 }}
                 className="bg-amber-500 hover:bg-amber-600 active:scale-95 text-slate-950 text-[10px] font-black px-2 py-1.5 rounded-lg flex items-center gap-1 transition-all"
               >
@@ -330,6 +327,51 @@ export default function DetailScreen({
           </div>
         )}
       </div>
+
+      {/* 📦 구매일 추가 Custom Modal */}
+      {showAddDateModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="bg-white border-2 border-slate-900 rounded-3xl p-5 w-full max-w-sm shadow-xl space-y-4 text-slate-900">
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-slate-900">📦 구매 내역 추가</h3>
+              <p className="text-[10px] text-slate-500 font-bold">주류를 구매하거나 소장하게 된 날짜를 입력해주세요.</p>
+            </div>
+            
+            <input 
+              type="date"
+              value={newDateInput}
+              onChange={(e) => setNewDateInput(e.target.value)}
+              className="w-full bg-slate-50 border-2 border-slate-900 rounded-xl py-3 px-3 text-xs font-bold text-slate-800 focus:outline-none"
+            />
+
+            <div className="flex space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowAddDateModal(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-2.5 rounded-xl border border-slate-300 transition-all text-xs"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (newDateInput.trim() && onUpdateLiquor) {
+                    const updated = {
+                      ...selectedEntry,
+                      purchaseDates: [...(selectedEntry.purchaseDates || []), newDateInput.trim()].sort((a, b) => b.localeCompare(a))
+                    };
+                    onUpdateLiquor(updated);
+                    setShowAddDateModal(false);
+                  }
+                }}
+                className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-black py-2.5 rounded-xl transition-all text-xs"
+              >
+                추가 완료
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

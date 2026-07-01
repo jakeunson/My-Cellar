@@ -55,12 +55,16 @@ export default function RankingScreen({
               key={record.id}
               className="bg-white border-2 border-slate-900 rounded-2xl p-4 space-y-3 shadow-md relative overflow-hidden"
             >
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div className="flex items-center space-x-2">
-                  <span className="bg-slate-900 text-amber-400 text-xs font-black px-2.5 py-1 rounded-lg">
-                    {record.date}
-                  </span>
-                  <span className="font-extrabold text-slate-800 text-sm">{record.title}</span>
+              <div className="flex items-start justify-between border-b border-slate-100 pb-2.5">
+                <div className="flex flex-col space-y-1.5 min-w-0 pr-2">
+                  <div className="flex items-center">
+                    <span className="bg-slate-900 text-amber-400 text-[10px] font-black px-2.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                      {record.date}
+                    </span>
+                  </div>
+                  <h2 className="font-extrabold text-slate-800 text-sm leading-snug break-all">
+                    {record.title}
+                  </h2>
                 </div>
                 {onDeleteRankingRecord && (
                   <button
